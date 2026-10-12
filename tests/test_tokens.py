@@ -69,6 +69,13 @@ def test_silent_token_is_bound_to_cached_account_and_hidden_from_repr(tmp_path: 
     assert script.silent_accounts == script.accounts
 
 
+def test_revoked_refresh_credential_requires_explicit_sign_in(tmp_path: Path) -> None:
+    script = Script(accounts=[msal_account()], silent={GRAPH_CLIENT: {"error": "invalid_grant"}})
+
+    with pytest.raises(AuthenticationRequired, match="no longer accepts the stored sign-in"):
+        provider(script, tmp_path).get_token("outlook.graph")
+
+
 def test_valid_memo_is_reused_and_refresh_options_bypass_it(tmp_path: Path) -> None:
     script = Script(
         accounts=[msal_account()],
@@ -132,6 +139,25 @@ def test_bootstrap_does_not_start_new_device_flows_after_approval_fails(tmp_path
     results = provider(script, tmp_path, profiles=profiles).bootstrap(show=lambda _message: None)
     assert script.shown_flows == 1
     assert [result.ready for result in results] == [False, False]
+
+
+def test_bootstrap_keeps_ready_profile_when_a_later_profile_is_declined(tmp_path: Path) -> None:
+    script = Script(
+        accounts=[msal_account()],
+        silent={GRAPH_CLIENT: token_result(aud=GRAPH, scp="Mail.Read")},
+        device_result={"error": "authorization_declined"},
+    )
+    profiles = {name: PROFILES[name] for name in ("outlook.graph", "outlook.api")}
+    tokens_ = provider(script, tmp_path, profiles=profiles)
+    seed_cache(tokens_._cache(), client_id=GRAPH_CLIENT, scope="https://graph.microsoft.com/Mail.Read")
+
+    results = tokens_.bootstrap(show=lambda _message: None)
+
+    assert [result.ready for result in results] == [True, False]
+    status = tokens_.status()
+    assert status.profiles[0].signed_in
+    assert not status.profiles[1].signed_in
+    assert script.shown_flows == 1
 
 
 def test_identity_network_failures_are_retried(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
