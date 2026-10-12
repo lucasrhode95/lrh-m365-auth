@@ -89,7 +89,7 @@ class TokenProvider:
     def profile_names(self) -> tuple[str, ...]:
         return tuple(self.profiles)
 
-    def sign_in_command(self, _profile: str | None = None) -> str:
+    def sign_in_command(self, profile: str | None = None) -> str:
         """Return this connector's one shared-auth entry point."""
         return self.login_command + (" --unsecure" if self.unsecure else "")
 
