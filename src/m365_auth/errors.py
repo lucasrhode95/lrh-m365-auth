@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 
 class AuthError(Exception):
     """Base class for authentication errors that product connectors can present."""
+
+    failure: Any | None = None
 
 
 class AuthenticationRequired(AuthError):
