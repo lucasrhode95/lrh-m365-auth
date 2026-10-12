@@ -7,6 +7,10 @@ reuses accepted credentials, and requests device-code approval only for a profil
 Microsoft can still require more than one approval because the connectors use different public
 clients and resource audiences.
 
+The `outlook.graph` profile requests delegated Graph `Mail.Read` and `User.Read`: mailbox reads use
+the former, while Outlook's signed-in profile and photo use the latter. The additional profile
+permission does not establish access to OneDrive or SharePoint files.
+
 The cache is for one active Microsoft account. Switching accounts requires the connector's
 `auth --sign-out` command followed by `auth`; the account-state marker makes already-running
 processes discard in-memory tokens on their next acquisition. Encryption is mandatory by default.
