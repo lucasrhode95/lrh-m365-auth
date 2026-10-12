@@ -68,7 +68,7 @@ def test_concurrent_processes_acquire_one_consistent_shared_account(tmp_path: Pa
         )
         status = provider.status()
         assert [account.object_id for account in status.accounts] == [USER_OID]
-        assert status.profiles[0].signed_in
+        assert status.profiles[0].client_credential_cached
     finally:
         for process in processes:
             if process.is_alive():

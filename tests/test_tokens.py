@@ -155,8 +155,8 @@ def test_bootstrap_keeps_ready_profile_when_a_later_profile_is_declined(tmp_path
 
     assert [result.ready for result in results] == [True, False]
     status = tokens_.status()
-    assert status.profiles[0].signed_in
-    assert not status.profiles[1].signed_in
+    assert status.profiles[0].client_credential_cached
+    assert not status.profiles[1].client_credential_cached
     assert script.shown_flows == 1
 
 
@@ -196,10 +196,27 @@ def test_status_reads_synthetic_cache_without_network(tmp_path: Path) -> None:
     assert status.exists and status.mode == "plaintext-development"
     assert [account.object_id for account in status.accounts] == [USER_OID]
     profiles = {profile.profile: profile for profile in status.profiles}
-    assert profiles["outlook.graph"].signed_in
+    assert profiles["outlook.graph"].client_credential_cached
     assert profiles["outlook.graph"].access_token_expires_on
-    assert not profiles["outlook.api"].signed_in
+    assert not profiles["outlook.api"].client_credential_cached
     assert profiles["outlook.api"].access_token_expires_on is None
+
+
+def test_status_separates_client_credentials_from_resource_tokens(tmp_path: Path) -> None:
+    teams_profiles = {name: PROFILES[name] for name in ("teams.spaces", "teams.csa", "teams.graph")}
+    tokens_ = provider(Script(), tmp_path, profiles=teams_profiles)
+    seed_cache(
+        tokens_._cache(),
+        client_id=PROFILES["teams.spaces"].client_id,
+        scope="https://api.spaces.skype.com/.default",
+    )
+
+    profiles = {row.profile: row for row in tokens_.status().profiles}
+
+    assert all(row.client_credential_cached for row in profiles.values())
+    assert profiles["teams.spaces"].access_token_expires_on is not None
+    assert profiles["teams.csa"].access_token_expires_on is None
+    assert profiles["teams.graph"].access_token_expires_on is None
 
 
 def test_sign_out_invalidates_a_memoized_token_in_another_process(

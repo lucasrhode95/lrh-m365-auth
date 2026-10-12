@@ -63,7 +63,7 @@ class ProfileStatus:
     client_id: str
     scopes: tuple[str, ...]
     purpose: str
-    signed_in: bool
+    client_credential_cached: bool
     access_token_expires_on: int | None
 
 

@@ -259,7 +259,13 @@ class TokenProvider:
             return existed
 
     def status(self) -> CacheStatus:
-        """Read cached account/profile status without network access or token values."""
+        """Read cache facts without network access or token values.
+
+        Client credential presence is client-wide, so profiles sharing one OAuth client can
+        report the same value. Access-token expiry is resource-specific. Neither field proves
+        that Microsoft will issue a token or authorize a service request; ``get_token`` checks
+        token acquisition, and the owning connector checks service access.
+        """
         with self._lock():
             exists = self.cache_path.exists()
             cache = self._cache() if exists else msal.TokenCache()
@@ -293,7 +299,7 @@ class TokenProvider:
                         spec.client_id,
                         spec.scopes,
                         spec.purpose,
-                        signed_in=bool(refresh),
+                        client_credential_cached=bool(refresh),
                         access_token_expires_on=max(expiries) if expiries else None,
                     )
                 )

@@ -15,6 +15,12 @@ The cache is for one active Microsoft account. Switching accounts requires the c
 `auth --sign-out` command followed by `auth`; the account-state marker makes already-running
 processes discard in-memory tokens on their next acquisition. Encryption is mandatory by default.
 
+Offline status reports whether each OAuth client has a cached refresh credential and when a
+matching resource access token expires, if one is cached. Profiles that share a client can show the
+same client-credential state even when only one resource token is cached. `status --check` attempts
+token acquisition for each profile; only an operation against the owning service can establish
+service access.
+
 Connectors bind the token source used by a service context to that context's account. If another
 process switches accounts, later API requests from the old context fail with an account mismatch
 instead of mixing the new account's remote data with the old account's local store.
