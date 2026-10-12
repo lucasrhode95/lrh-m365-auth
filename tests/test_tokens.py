@@ -45,6 +45,7 @@ def test_profile_catalog_covers_all_three_connectors_without_name_collisions() -
     assert tuple(PROFILES) == (
         "outlook.graph",
         "outlook.api",
+        "m365.search",
         "teams.spaces",
         "teams.csa",
         "teams.graph",

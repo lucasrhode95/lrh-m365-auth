@@ -43,6 +43,12 @@ PROFILES: Mapping[str, TokenProfile] = MappingProxyType(
             ("https://outlook.office.com/.default",),
             "Outlook APIs used for mail changes, inbox rules and native signatures",
         ),
+        "m365.search": TokenProfile(
+            "m365.search",
+            ONE_OUTLOOK_WEB_CLIENT_ID,
+            ("https://outlook.office.com/search/.default",),
+            "Microsoft 365 Search v2 for Outlook calendar events and Teams discovery",
+        ),
         "teams.spaces": TokenProfile(
             "teams.spaces",
             TEAMS_CLIENT_ID,
