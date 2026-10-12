@@ -1,5 +1,6 @@
 """Shared authentication for the local Microsoft 365 connector family."""
 
+from m365_auth.binding import AccountBoundTokenSource
 from m365_auth.errors import (
     AccountMismatch,
     AuthConfigurationError,
@@ -15,6 +16,7 @@ from m365_auth.tokens import TokenProvider
 __all__ = [
     "PROFILES",
     "AccessToken",
+    "AccountBoundTokenSource",
     "Account",
     "AccountMismatch",
     "AuthConfigurationError",

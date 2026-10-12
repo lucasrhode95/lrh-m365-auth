@@ -11,6 +11,10 @@ The cache is for one active Microsoft account. Switching accounts requires the c
 `auth --sign-out` command followed by `auth`; the account-state marker makes already-running
 processes discard in-memory tokens on their next acquisition. Encryption is mandatory by default.
 
+Connectors bind the token source used by a service context to that context's account. If another
+process switches accounts, later API requests from the old context fail with an account mismatch
+instead of mixing the new account's remote data with the old account's local store.
+
 This package does not make Microsoft Graph, Outlook, or Teams requests. It does not exchange Teams
 tokens for a Chat Service session, read browser cookies, run a daemon, or refresh tokens in the
 background.
