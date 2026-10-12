@@ -21,6 +21,10 @@ same client-credential state even when only one resource token is cached. `statu
 token acquisition for each profile; only an operation against the owning service can establish
 service access.
 
+The `m365.search` profile requests the separate Outlook-host Search resource used by the verified
+Search v2 calendar and Teams-message queries. It uses the same first-party client as `outlook.api`
+but has a distinct resource token; approval for one resource does not prove the other is available.
+
 Connectors bind the token source used by a service context to that context's account. If another
 process switches accounts, later API requests from the old context fail with an account mismatch
 instead of mixing the new account's remote data with the old account's local store.

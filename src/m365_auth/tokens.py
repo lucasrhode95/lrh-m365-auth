@@ -291,7 +291,7 @@ class TokenProvider:
                         msal.TokenCache.CredentialType.ACCESS_TOKEN, query={"client_id": spec.client_id}
                     )
                     if int(entry.get("expires_on", 0)) > now
-                    and any(resource in str(entry.get("target", "")).lower() for resource in resources)
+                    and _target_has_resource(str(entry.get("target", "")), resources)
                 ]
                 rows.append(
                     ProfileStatus(
@@ -520,6 +520,11 @@ def _resource(scope: str) -> str:
     if scope.endswith("/.default"):
         return scope.removesuffix("/.default").lower()
     return scope.rsplit("/", 1)[0].lower()
+
+
+def _target_has_resource(target: str, resources: set[str]) -> bool:
+    """Match cached target scopes to one exact normalized resource, not a substring."""
+    return any(_resource(scope) in resources for scope in target.lower().split())
 
 
 def _error_text(result: Any) -> str:
