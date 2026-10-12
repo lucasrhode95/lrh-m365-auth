@@ -203,6 +203,20 @@ def test_status_reads_synthetic_cache_without_network(tmp_path: Path) -> None:
     assert profiles["outlook.api"].access_token_expires_on is None
 
 
+def test_status_does_not_match_search_resource_as_outlook_api(tmp_path: Path) -> None:
+    tokens_ = provider(Script(), tmp_path)
+    seed_cache(
+        tokens_._cache(),
+        client_id=PROFILES["m365.search"].client_id,
+        scope="https://outlook.office.com/search/.default",
+    )
+
+    profiles = {row.profile: row for row in tokens_.status().profiles}
+
+    assert profiles["m365.search"].access_token_expires_on is not None
+    assert profiles["outlook.api"].access_token_expires_on is None
+
+
 def test_status_separates_client_credentials_from_resource_tokens(tmp_path: Path) -> None:
     teams_profiles = {name: PROFILES[name] for name in ("teams.spaces", "teams.csa", "teams.graph")}
     tokens_ = provider(Script(), tmp_path, profiles=teams_profiles)
