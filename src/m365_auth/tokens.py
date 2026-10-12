@@ -120,7 +120,8 @@ class TokenProvider:
             self._memo.pop(profile, None)
 
             app = self._retry(lambda: self._app(spec))
-            account = self._bound_account(app.get_accounts())
+            account_rows = app.get_accounts()
+            account = self._bound_account(account_rows)
             if account is None:
                 raise AuthenticationRequired(
                     f"No Microsoft sign-in found for '{profile}'.", command=self.sign_in_command()
@@ -132,7 +133,9 @@ class TokenProvider:
             if claims_challenge:
                 options["claims_challenge"] = claims_challenge
             result = self._retry(
-                lambda: app.acquire_token_silent_with_error(list(spec.scopes), account=account, **options)
+                lambda: app.acquire_token_silent_with_error(
+                    list(spec.scopes), account=self._msal_account(account_rows, account), **options
+                )
             )
             token = self._token_from_result(profile, result)
             self._validate_result_account(result, token, account)
@@ -402,6 +405,17 @@ class TokenProvider:
     def _bound_account(self, rows: Iterable[dict[str, Any]]) -> Account | None:
         accounts = tuple(self._account_or_error(row) for row in rows)
         return self._bound_account_rows(accounts)
+
+    def _msal_account(self, rows: Iterable[dict[str, Any]], expected: Account) -> dict[str, Any]:
+        """Return MSAL's original account row matching the validated shared identity.
+
+        Internal service code uses the small `Account` model, while MSAL's silent-acquisition API
+        requires the original dictionary returned by `get_accounts()`.
+        """
+        for row in rows:
+            if self._account_or_error(row).identity_hash == expected.identity_hash:
+                return row
+        raise AuthConfigurationError("The selected Microsoft account disappeared from the token cache.")
 
     def _bound_account_rows(self, accounts: tuple[Account, ...]) -> Account | None:
         identities = {account.identity_hash for account in accounts}

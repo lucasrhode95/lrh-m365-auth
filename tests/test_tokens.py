@@ -66,6 +66,7 @@ def test_silent_token_is_bound_to_cached_account_and_hidden_from_repr(tmp_path: 
     assert token.profile == "outlook.graph"
     assert token.claims()["aud"] == GRAPH
     assert "value=" not in repr(token)
+    assert script.silent_accounts == script.accounts
 
 
 def test_valid_memo_is_reused_and_refresh_options_bypass_it(tmp_path: Path) -> None:

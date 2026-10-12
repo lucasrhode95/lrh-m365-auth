@@ -61,6 +61,7 @@ class Script:
     removed: list[dict[str, Any]] = field(default_factory=list)
     shown_flows: int = 0
     silent_options: list[dict[str, Any]] = field(default_factory=list)  # kwargs of each silent call
+    silent_accounts: list[dict[str, Any]] = field(default_factory=list)
     created: list[str] = field(default_factory=list)
     cache_path: Path | None = None
 
@@ -91,6 +92,9 @@ class FakeApp:
     def acquire_token_silent_with_error(
         self, scopes: list[str], account: dict[str, Any], **options: Any
     ) -> Any:
+        if not isinstance(account, dict):
+            raise TypeError("MSAL silent acquisition requires the original account dictionary.")
+        self.script.silent_accounts.append(account)
         self.script.silent_options.append(options)
         result = self.script.silent.get(self.client_id)
         if isinstance(result, list):  # sequence of outcomes, consumed in order
