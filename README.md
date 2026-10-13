@@ -33,7 +33,7 @@ This package does not make Microsoft Graph, Outlook, or Teams requests. It does 
 tokens for a Chat Service session, read browser cookies, run a daemon, or refresh tokens in the
 background.
 
-## Product boundaries
+## Microsoft 365 connectors
 
 This repository is part of the `lrh-*` Microsoft 365 connectors: local tools that give MCP agents
 access to a common corporate environment, its mail and calendar, chats and meetings, and files. Each
@@ -51,14 +51,6 @@ chat and artifacts. A file linked from an email or a Teams message stays part of
 the stored file itself is retrieved through SharePoint. Only verified identifiers connect records
 across products.
 
-> [!WARNING]
-> These tools sign in as Microsoft's own apps and use undocumented Outlook and Teams services.
-> Giving an AI agent access to your work mail, chats or files may break your organization's policies
-> on AI use and data handling, so check with your IT or security team first. The tools are provided
-> as is, without warranty, and the authors are not responsible for any misuse or its consequences.
-> Microsoft, Outlook, Teams, SharePoint and Entra are trademarks of Microsoft; this project is not
-> affiliated with or endorsed by Microsoft.
-
 ## Development
 
 ```powershell
@@ -70,6 +62,16 @@ uv run pytest
 ```
 
 Tests use synthetic accounts and fake identity-provider responses. They never contact Microsoft.
+
+## Disclaimer
+
+> [!WARNING]
+> These tools sign in as Microsoft's own apps and use undocumented Outlook and Teams services.
+> Giving an AI agent access to your work mail, chats or files may break your organization's policies
+> on AI use and data handling, so check with your IT or security team first. The tools are provided
+> as is, without warranty, and the authors are not responsible for any misuse or its consequences.
+> Microsoft, Outlook, Teams, SharePoint and Entra are trademarks of Microsoft; this project is not
+> affiliated with or endorsed by Microsoft.
 
 ## License
 
