@@ -3,7 +3,7 @@ name = "lrh-m365-auth"
 version = "0.1.0"
 description = "Shared Microsoft 365 authentication for local connectors."
 readme = "README.md"
-license = "LicenseRef-PolyForm-Strict-1.0.0"
+license = "LicenseRef-PolyForm-Internal-Use-1.0.0"
 license-files = ["LICENSE.md"]
 requires-python = ">=3.12"
 dependencies = [
