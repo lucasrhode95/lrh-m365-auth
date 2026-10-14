@@ -64,6 +64,8 @@ uv run pytest
 
 Tests use synthetic accounts and fake identity-provider responses. They never contact Microsoft.
 
+Project references: [documentation index](docs/README.md) · [sign-in research](docs/api-research.md).
+
 ## Disclaimer
 
 > [!WARNING]
