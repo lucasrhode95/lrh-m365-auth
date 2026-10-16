@@ -1,4 +1,4 @@
-![The Outlook, Teams and SharePoint connectors share one encrypted token cache through lrh-m365-auth, which signs in with Microsoft Entra ID.](docs/connector-overview.svg)
+![The Outlook, Teams and SharePoint connectors share one encrypted token cache through lrh-m365-auth, which signs in with Microsoft Entra ID.](https://raw.githubusercontent.com/lucasrhode95/lrh-m365-auth/main/docs/connector-overview.svg)
 
 Shared Microsoft sign-in for the local Outlook, Teams, and SharePoint connectors. The library
 keeps each product's client/resource profile in one encrypted MSAL cache under the same Windows
