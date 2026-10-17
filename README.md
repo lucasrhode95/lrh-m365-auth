@@ -29,6 +29,9 @@ Connectors bind the token source used by a service context to that context's acc
 process switches accounts, later API requests from the old context fail with an account mismatch
 instead of mixing the new account's remote data with the old account's local store.
 
+The library logs to the `m365_auth` loggers and adds no handlers, so each connector's logging settings
+and redaction apply. Records name profiles and outcomes only, never tokens, accounts or device codes.
+
 This package does not make Microsoft Graph, Outlook, or Teams requests. It does not exchange Teams
 tokens for a Chat Service session, read browser cookies, run a daemon, or refresh tokens in the
 background.
