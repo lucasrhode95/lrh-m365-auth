@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 import time
 import uuid
 from collections.abc import Callable, Iterable, Iterator, Mapping
@@ -151,7 +152,7 @@ class TokenProvider:
             _log.debug("Token profile=%s source=%s", profile, token.source)
             return token
 
-    def sign_in(self, profile: str, *, show: Callable[[str], None] = print) -> AccessToken:
+    def sign_in(self, profile: str, *, show: Callable[[str], None] | None = None) -> AccessToken:
         """Complete one profile's device-code flow without locking while a person approves it."""
         spec = self._profile(profile)
         with self._lock():
@@ -171,7 +172,7 @@ class TokenProvider:
         flow = self._retry(lambda: app.initiate_device_flow(scopes=list(spec.scopes)))
         if not isinstance(flow, dict) or "user_code" not in flow:
             raise AuthUpstream(f"Microsoft did not start device-code sign-in: {_error_text(flow)}")
-        show(str(flow.get("message", "")))
+        (show or _prompt_on_stderr)(str(flow.get("message", "")))
         _log.info("Device-code sign-in started profile=%s", profile)
         result = app.acquire_token_by_device_flow(flow)
         if isinstance(result, dict) and result.get("error") in ("authorization_pending", "expired_token"):
@@ -224,7 +225,7 @@ class TokenProvider:
             _log.info("Device-code sign-in completed profile=%s", profile)
             return token
 
-    def bootstrap(self, *, show: Callable[[str], None] = print) -> tuple[BootstrapResult, ...]:
+    def bootstrap(self, *, show: Callable[[str], None] | None = None) -> tuple[BootstrapResult, ...]:
         """Prepare every shared profile, prompting only when silent acquisition needs consent."""
         results: list[BootstrapResult] = []
         interactive_allowed = True
@@ -552,3 +553,8 @@ def _error_text(result: Any) -> str:
     codes = result.get("error_codes") or []
     suffix = f" AADSTS{codes[0]}" if codes else ""
     return f"{result.get('error', 'unknown_error')}{suffix}"
+
+
+def _prompt_on_stderr(message: str) -> None:
+    """The default sign-in prompt: stderr, so a stdio process never writes it to its protocol stream."""
+    print(message, file=sys.stderr, flush=True)
