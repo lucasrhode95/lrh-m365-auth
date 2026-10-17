@@ -11,6 +11,7 @@ from m365_auth.errors import (
 )
 from m365_auth.models import AccessToken, Account, BootstrapResult, CacheStatus, ProfileStatus
 from m365_auth.profiles import PROFILES, TokenProfile
+from m365_auth.status import check_profiles, status_lines, status_report
 from m365_auth.tokens import TokenProvider
 
 __all__ = [
@@ -25,8 +26,11 @@ __all__ = [
     "AuthenticationRequired",
     "BootstrapResult",
     "CacheStatus",
+    "check_profiles",
     "ProfileStatus",
     "SecureStorageUnavailable",
     "TokenProfile",
     "TokenProvider",
+    "status_lines",
+    "status_report",
 ]
