@@ -1,9 +1,15 @@
-"""Cross-process-safe silent token acquisition and explicit device-code sign-in."""
+"""Cross-process-safe silent token acquisition and explicit device-code sign-in.
+
+Logs go to the ``m365_auth`` loggers and follow the host application's logging configuration; this
+library adds no handlers. Records name profiles and outcomes only, never tokens, accounts or codes.
+"""
 
 from __future__ import annotations
 
 import json
+import logging
 import os
+import sys
 import time
 import uuid
 from collections.abc import Callable, Iterable, Iterator, Mapping
@@ -32,6 +38,7 @@ _MEMO_MARGIN_SECONDS = 300
 _ACCOUNT_STATE_NAME = "account-state.json"
 _DEV_ACCOUNT_STATE_NAME = "account-state.plaintext-dev.json"
 AppFactory = Callable[..., Any]
+_log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -116,6 +123,7 @@ class TokenProvider:
                 and memo[0].expires_on
                 and memo[0].expires_on - time.time() > _MEMO_MARGIN_SECONDS
             ):
+                _log.debug("Token profile=%s source=memory", profile)
                 return replace(memo[0], source="memory")
             self._memo.pop(profile, None)
 
@@ -123,6 +131,7 @@ class TokenProvider:
             account_rows = app.get_accounts()
             account = self._bound_account(account_rows)
             if account is None:
+                _log.info("No Microsoft sign-in for profile=%s", profile)
                 raise AuthenticationRequired(
                     f"No Microsoft sign-in found for '{profile}'.", command=self.sign_in_command()
                 )
@@ -140,9 +149,10 @@ class TokenProvider:
             token = self._token_from_result(profile, result)
             self._validate_result_account(result, token, account)
             self._memo[profile] = (token, account.identity_hash, state.generation)
+            _log.debug("Token profile=%s source=%s", profile, token.source)
             return token
 
-    def sign_in(self, profile: str, *, show: Callable[[str], None] = print) -> AccessToken:
+    def sign_in(self, profile: str, *, show: Callable[[str], None] | None = None) -> AccessToken:
         """Complete one profile's device-code flow without locking while a person approves it."""
         spec = self._profile(profile)
         with self._lock():
@@ -162,7 +172,8 @@ class TokenProvider:
         flow = self._retry(lambda: app.initiate_device_flow(scopes=list(spec.scopes)))
         if not isinstance(flow, dict) or "user_code" not in flow:
             raise AuthUpstream(f"Microsoft did not start device-code sign-in: {_error_text(flow)}")
-        show(str(flow.get("message", "")))
+        (show or _prompt_on_stderr)(str(flow.get("message", "")))
+        _log.info("Device-code sign-in started profile=%s", profile)
         result = app.acquire_token_by_device_flow(flow)
         if isinstance(result, dict) and result.get("error") in ("authorization_pending", "expired_token"):
             raise AuthenticationRequired(
@@ -211,9 +222,10 @@ class TokenProvider:
             self._write_state(state)
             self._observed_generation = state.generation
             self._memo[profile] = (token, signed_in.identity_hash, state.generation)
+            _log.info("Device-code sign-in completed profile=%s", profile)
             return token
 
-    def bootstrap(self, *, show: Callable[[str], None] = print) -> tuple[BootstrapResult, ...]:
+    def bootstrap(self, *, show: Callable[[str], None] | None = None) -> tuple[BootstrapResult, ...]:
         """Prepare every shared profile, prompting only when silent acquisition needs consent."""
         results: list[BootstrapResult] = []
         interactive_allowed = True
@@ -256,6 +268,7 @@ class TokenProvider:
             self._token_cache = None
             self._observed_generation = None
             self.cache_path.unlink(missing_ok=True)
+            _log.info("Signed out; the shared token cache was removed")
             return existed
 
     def status(self) -> CacheStatus:
@@ -387,6 +400,7 @@ class TokenProvider:
 
     def _observe_state(self, state: _AccountState) -> None:
         if self._observed_generation is not None and state.generation != self._observed_generation:
+            _log.info("The shared account changed; memoized tokens were dropped")
             self._apps.clear()
             self._token_cache = None
             self._memo.clear()
@@ -491,6 +505,12 @@ class TokenProvider:
             except (requests.ConnectionError, requests.Timeout) as exc:
                 if attempt == _NETWORK_RETRIES - 1:
                     raise AuthUpstream(f"Could not reach Microsoft sign-in ({type(exc).__name__}).") from None
+                _log.warning(
+                    "Microsoft sign-in unreachable (%s); retry %d of %d",
+                    type(exc).__name__,
+                    attempt + 1,
+                    _NETWORK_RETRIES - 1,
+                )
                 time.sleep(2**attempt)
         raise AssertionError("unreachable")
 
@@ -533,3 +553,8 @@ def _error_text(result: Any) -> str:
     codes = result.get("error_codes") or []
     suffix = f" AADSTS{codes[0]}" if codes else ""
     return f"{result.get('error', 'unknown_error')}{suffix}"
+
+
+def _prompt_on_stderr(message: str) -> None:
+    """The default sign-in prompt: stderr, so a stdio process never writes it to its protocol stream."""
+    print(message, file=sys.stderr, flush=True)

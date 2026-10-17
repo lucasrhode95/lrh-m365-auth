@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -298,3 +299,30 @@ def test_status_fails_closed_when_state_and_encrypted_cache_disagree(tmp_path: P
     )
     with pytest.raises(AccountMismatch):
         tokens_.status()
+
+
+def test_logs_name_profiles_and_outcomes_but_never_tokens(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    script = Script(
+        accounts=[msal_account()],
+        silent={GRAPH_CLIENT: token_result(aud=GRAPH, scp="Mail.Read")},
+    )
+    auth = provider(script, tmp_path)
+    with caplog.at_level(logging.DEBUG, logger="m365_auth"):
+        token = auth.get_token("outlook.graph")
+        auth.sign_out()
+
+    text = caplog.text
+    assert "profile=outlook.graph" in text and "Signed out" in text
+    assert token.value not in text and USER_OID not in text
+
+
+def test_the_default_sign_in_prompt_goes_to_stderr_not_stdout(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    script = Script(device_result=token_result(aud=GRAPH, scp="Mail.Read", source="identity_provider"))
+    provider(script, tmp_path).sign_in("outlook.graph")
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "ABC123" in captured.err

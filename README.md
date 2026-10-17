@@ -1,8 +1,8 @@
 ![The Outlook, Teams and SharePoint connectors share one encrypted token cache through lrh-m365-auth, which signs in with Microsoft Entra ID.](https://raw.githubusercontent.com/lucasrhode95/lrh-m365-auth/main/docs/connector-overview.svg)
 
 Shared Microsoft sign-in for the local Outlook, Teams, and SharePoint connectors. The library
-keeps each product's client/resource profile in one encrypted MSAL cache under the same Windows
-user profile. Any connector's explicit `auth` command checks every supported profile, silently
+keeps each product's client/resource profile in one encrypted MSAL cache in the user's data folder
+(see Configuration). Any connector's explicit `auth` command checks every supported profile, silently
 reuses accepted credentials, and requests device-code approval only for a profile that needs it.
 Microsoft can still require more than one approval because the connectors use different public
 clients and resource audiences.
@@ -29,9 +29,24 @@ Connectors bind the token source used by a service context to that context's acc
 process switches accounts, later API requests from the old context fail with an account mismatch
 instead of mixing the new account's remote data with the old account's local store.
 
+The library logs to the `m365_auth` loggers and adds no handlers, so each connector's logging settings
+and redaction apply. Records name profiles and outcomes only, never tokens, accounts or device codes.
+
 This package does not make Microsoft Graph, Outlook, or Teams requests. It does not exchange Teams
 tokens for a Chat Service session, read browser cookies, run a daemon, or refresh tokens in the
 background.
+
+## Configuration
+
+- Data folder: `%USERPROFILE%/.lrh-m365-auth` on Windows, and `$XDG_DATA_HOME/lrh-m365-auth` (default
+  `~/.local/share/lrh-m365-auth`) elsewhere. `M365_AUTH_HOME` overrides it, for tests and isolated
+  development probes.
+- `M365_AUTH_AUTHORITY` overrides the sign-in authority, which defaults to
+  `https://login.microsoftonline.com/organizations`. Leave it unset for normal use.
+- The connectors' `--unsecure` option (development probes only) uses a separate plaintext cache file
+  in the same folder. The environment never implies it.
+- `status` and `auth_status` read the cache without network access. On first use they can create the
+  empty data folder and its lock file; they never print or return token values.
 
 ## Microsoft 365 connectors
 
