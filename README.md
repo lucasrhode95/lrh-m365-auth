@@ -36,6 +36,18 @@ This package does not make Microsoft Graph, Outlook, or Teams requests. It does 
 tokens for a Chat Service session, read browser cookies, run a daemon, or refresh tokens in the
 background.
 
+## Setup
+
+This library installs automatically with the connectors. Follow their README setup steps:
+
+- [Outlook](https://github.com/lucasrhode95/lrh-outlook-connector#setup)
+- [Teams](https://github.com/lucasrhode95/lrh-teams-connector#setup)
+- [SharePoint](https://github.com/lucasrhode95/lrh-sharepoint-connector#setup)
+
+Run one connector's `auth` command once for all installed Microsoft connectors. Keep it running and
+complete any device codes sequentially. Multiple codes can be normal; do not start separate or
+parallel sign-ins for each repository.
+
 ## Configuration
 
 - Data folder: `%USERPROFILE%/.lrh-m365-auth` on Windows, and `$XDG_DATA_HOME/lrh-m365-auth` (default
