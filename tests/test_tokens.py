@@ -12,6 +12,7 @@ from m365_auth import (
     AccountMismatch,
     AuthConfigurationError,
     AuthenticationRequired,
+    AuthUpstream,
     SecureStorageUnavailable,
     TokenProvider,
     tokens,
@@ -57,6 +58,27 @@ def test_profile_catalog_covers_all_three_connectors_without_name_collisions() -
 def test_unknown_profile_is_rejected_at_the_public_boundary(tmp_path: Path) -> None:
     with pytest.raises(AuthConfigurationError, match="Unknown auth profile"):
         provider(Script(), tmp_path).get_token("graph")
+
+
+def test_profile_map_key_must_match_profile_definition(tmp_path: Path) -> None:
+    with pytest.raises(AuthConfigurationError, match="match their profile definitions"):
+        TokenProvider(
+            unsecure=True,
+            cache_path=tmp_path / "token-cache.json",
+            profiles={"other.name": PROFILES["outlook.graph"]},
+        )
+
+
+def test_profile_catalog_cannot_be_mutated_after_validation(tmp_path: Path) -> None:
+    auth = provider(Script(), tmp_path)
+
+    with pytest.raises(TypeError):
+        auth.profiles["outlook.graph"] = PROFILES["outlook.api"]  # type: ignore[index]
+
+
+def test_non_string_profile_is_rejected_at_the_public_boundary(tmp_path: Path) -> None:
+    with pytest.raises(AuthConfigurationError, match="profile name must be a string"):
+        provider(Script(), tmp_path).get_token(["outlook.graph"])  # type: ignore[arg-type]
 
 
 def test_silent_token_is_bound_to_cached_account_and_hidden_from_repr(tmp_path: Path) -> None:
@@ -129,6 +151,24 @@ def test_expired_device_code_requires_a_new_explicit_login(tmp_path: Path) -> No
         provider(script, tmp_path).sign_in("outlook.graph", show=lambda _message: None)
 
 
+def test_device_code_start_timeout_is_not_retried(tmp_path: Path) -> None:
+    script = Script(device_flow_start_error=requests.Timeout())
+
+    with pytest.raises(AuthUpstream, match="Could not reach Microsoft sign-in"):
+        provider(script, tmp_path).sign_in("outlook.graph", show=lambda _message: None)
+
+    assert script.device_flow_start_calls == 1
+
+
+def test_device_code_poll_timeout_uses_the_auth_error_contract(tmp_path: Path) -> None:
+    script = Script(device_flow_acquire_error=requests.Timeout())
+
+    with pytest.raises(AuthUpstream, match="Could not reach Microsoft sign-in"):
+        provider(script, tmp_path).sign_in("outlook.graph", show=lambda _message: None)
+
+    assert script.device_flow_start_calls == 1
+
+
 def test_declined_device_code_is_an_identity_service_error(tmp_path: Path) -> None:
     script = Script(device_result={"error": "authorization_declined"})
     with pytest.raises(tokens.AuthUpstream):
@@ -139,7 +179,7 @@ def test_bootstrap_does_not_start_new_device_flows_after_approval_fails(tmp_path
     script = Script(device_result={"error": "authorization_declined"})
     profiles = {name: PROFILES[name] for name in ("outlook.graph", "outlook.api")}
     results = provider(script, tmp_path, profiles=profiles).bootstrap(show=lambda _message: None)
-    assert script.shown_flows == 1
+    assert script.device_flow_start_calls == 1
     assert [result.ready for result in results] == [False, False]
 
 
@@ -159,7 +199,7 @@ def test_bootstrap_keeps_ready_profile_when_a_later_profile_is_declined(tmp_path
     status = tokens_.status()
     assert status.profiles[0].client_credential_cached
     assert not status.profiles[1].client_credential_cached
-    assert script.shown_flows == 1
+    assert script.device_flow_start_calls == 1
 
 
 def test_identity_network_failures_are_retried(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -298,6 +338,14 @@ def test_status_fails_closed_when_state_and_encrypted_cache_disagree(tmp_path: P
         '{"generation":"generation","identity_hash":"different-account"}', encoding="utf-8"
     )
     with pytest.raises(AccountMismatch):
+        tokens_.status()
+
+
+def test_status_reports_unreadable_account_state_as_configuration_error(tmp_path: Path) -> None:
+    tokens_ = provider(Script(), tmp_path)
+    tokens_.state_path.write_bytes(b"\xff")
+
+    with pytest.raises(AuthConfigurationError, match="account-state file cannot be read"):
         tokens_.status()
 
 

@@ -47,7 +47,7 @@
   <rect x="80" y="630" width="520" height="200" rx="14" fill="#f7f9fc" stroke="#c7d5e2" stroke-width="1.5"/>
   <path d="M80 694 V644 Q80 630 94 630 H586 Q600 630 600 644 V694 Z" fill="#183153"/>
   <text class="card-title" x="100" y="673">lrh-sharepoint-connector</text>
-  <text class="detail" x="100" y="730"><tspan class="code">outlook.graph</tspan> (file search and reads)</text>
+  <text class="detail" x="100" y="730"><tspan class="code">outlook.graph</tspan> (Graph token; file access is separate)</text>
   <text class="muted" x="100" y="776">every connector's <tspan class="code">auth</tspan> command</text>
   <text class="muted" x="100" y="802">prepares all six profiles</text>
 
@@ -74,8 +74,8 @@
   <text class="detail code" x="782" y="350" style="font-size:19px">outlook.graph</text>
   <text class="detail" x="1000" y="350" style="font-size:19px">Outlook Mobile</text>
   <text class="detail" x="1220" y="350" style="font-size:19px">Graph <tspan class="code">Mail.Read</tspan>, <tspan class="code">User.Read</tspan></text>
-  <text class="detail" x="1580" y="350" style="font-size:19px">mail reads, profile;</text>
-  <text class="detail" x="1580" y="376" style="font-size:19px">SharePoint files</text>
+  <text class="detail" x="1580" y="350" style="font-size:19px">mail reads and profile;</text>
+  <text class="detail" x="1580" y="376" style="font-size:19px">no file scopes requested</text>
   <path d="M730 396 H1830" stroke="#eef2f6" stroke-width="1.5"/>
 
   <rect x="740" y="412" width="32" height="26" rx="5" fill="#b7791f"/><text class="badge" x="756" y="431" text-anchor="middle">O</text>

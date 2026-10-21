@@ -8,8 +8,9 @@ Microsoft can still require more than one approval because the connectors use di
 clients and resource audiences.
 
 The `outlook.graph` profile requests delegated Graph `Mail.Read` and `User.Read`: mailbox reads use
-the former, while Outlook's signed-in profile and photo use the latter. The additional profile
-permission does not establish access to OneDrive or SharePoint files.
+the former, while Outlook's signed-in profile and photo use the latter. These requested scopes do
+not include OneDrive or SharePoint file permissions, and token acquisition alone does not establish
+service access.
 
 The cache is for one active Microsoft account. Switching accounts requires the connector's
 `auth --sign-out` command followed by `auth`; the account-state marker makes already-running
