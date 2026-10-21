@@ -34,8 +34,7 @@ PROFILES: Mapping[str, TokenProfile] = MappingProxyType(
                 "https://graph.microsoft.com/Mail.Read",
                 "https://graph.microsoft.com/User.Read",
             ),
-            "Outlook mail reads, signed-in profile and photo, and previously validated "
-            "file search through Graph",
+            "Outlook mail reads, signed-in profile and photo",
         ),
         "outlook.api": TokenProfile(
             "outlook.api",

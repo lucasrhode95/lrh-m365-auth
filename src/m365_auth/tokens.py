@@ -16,9 +16,11 @@ from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 import msal
+import requests
 from msal_extensions import CrossPlatLock, FilePersistence, PersistedTokenCache, build_encrypted_persistence
 
 from m365_auth.errors import (
@@ -72,7 +74,7 @@ class TokenProvider:
         self.state_path = self.cache_path.parent / (
             _DEV_ACCOUNT_STATE_NAME if unsecure else _ACCOUNT_STATE_NAME
         )
-        self.profiles = dict(PROFILES if profiles is None else profiles)
+        self.profiles = MappingProxyType(dict(PROFILES if profiles is None else profiles))
         self.authority = authority or os.environ.get("M365_AUTH_AUTHORITY", AUTHORITY)
         self.login_command = login_command
         self._app_factory = app_factory or msal.PublicClientApplication
@@ -81,7 +83,16 @@ class TokenProvider:
         self._memo: dict[str, tuple[AccessToken, str, str]] = {}
         self._observed_generation: str | None = None
 
-        for profile in self.profiles.values():
+        for name, profile in self.profiles.items():
+            if (
+                not isinstance(name, str)
+                or not name
+                or not isinstance(profile, TokenProfile)
+                or profile.name != name
+            ):
+                raise AuthConfigurationError(
+                    "Auth profile names must be nonempty and match their profile definitions."
+                )
             denied = [scope for scope in profile.scopes if (profile.client_id, scope) in DENIED_PAIRS]
             if denied:
                 raise AuthConfigurationError(
@@ -169,12 +180,19 @@ class TokenProvider:
                 )
             starting_generation = state.generation
 
-        flow = self._retry(lambda: app.initiate_device_flow(scopes=list(spec.scopes)))
+        # Each initiation creates a new server-side flow; a retry after a lost response can orphan one.
+        try:
+            flow = app.initiate_device_flow(scopes=list(spec.scopes))
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            raise AuthUpstream(f"Could not reach Microsoft sign-in ({type(exc).__name__}).") from None
         if not isinstance(flow, dict) or "user_code" not in flow:
             raise AuthUpstream(f"Microsoft did not start device-code sign-in: {_error_text(flow)}")
         (show or _prompt_on_stderr)(str(flow.get("message", "")))
         _log.info("Device-code sign-in started profile=%s", profile)
-        result = app.acquire_token_by_device_flow(flow)
+        try:
+            result = app.acquire_token_by_device_flow(flow)
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            raise AuthUpstream(f"Could not reach Microsoft sign-in ({type(exc).__name__}).") from None
         if isinstance(result, dict) and result.get("error") in ("authorization_pending", "expired_token"):
             raise AuthenticationRequired(
                 "The sign-in code expired before it was used.", command=self.sign_in_command()
@@ -331,6 +349,8 @@ class TokenProvider:
             return account
 
     def _profile(self, name: str) -> TokenProfile:
+        if not isinstance(name, str):
+            raise AuthConfigurationError("Auth profile name must be a string.")
         try:
             return self.profiles[name]
         except KeyError:
@@ -371,7 +391,7 @@ class TokenProvider:
             data = json.loads(self.state_path.read_text(encoding="utf-8"))
         except FileNotFoundError:
             return _AccountState("", None)
-        except (OSError, json.JSONDecodeError):
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             raise AuthConfigurationError(
                 "The shared account-state file cannot be read; sign-in is blocked."
             ) from None
@@ -497,8 +517,6 @@ class TokenProvider:
     @staticmethod
     def _retry(operation: Callable[[], Any]) -> Any:
         """Retry transient idempotent identity-provider requests."""
-        import requests
-
         for attempt in range(_NETWORK_RETRIES):
             try:
                 return operation()

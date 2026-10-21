@@ -59,16 +59,17 @@ class Script:
     silent: dict[str, Any] = field(default_factory=dict)  # client_id -> result (or Exception to raise)
     device_result: dict[str, Any] | None = None
     removed: list[dict[str, Any]] = field(default_factory=list)
-    shown_flows: int = 0
+    device_flow_start_calls: int = 0
     silent_options: list[dict[str, Any]] = field(default_factory=list)  # kwargs of each silent call
     silent_accounts: list[dict[str, Any]] = field(default_factory=list)
     created: list[str] = field(default_factory=list)
     cache_path: Path | None = None
+    device_flow_start_error: Exception | None = None
+    device_flow_acquire_error: Exception | None = None
 
 
 class FakeAppFactory:
-    """Stands in for ``msal.PublicClientApplication`` in every test (conftest), so no test can reach
-    Microsoft. A test scripts the sign-in answers with ``use_script``."""
+    """Stand in for ``msal.PublicClientApplication`` where a test scripts MSAL responses."""
 
     def __init__(self, script: Script) -> None:
         self.script = script
@@ -104,10 +105,14 @@ class FakeApp:
         return result
 
     def initiate_device_flow(self, scopes: list[str]) -> dict[str, Any]:
-        self.script.shown_flows += 1
+        self.script.device_flow_start_calls += 1
+        if self.script.device_flow_start_error is not None:
+            raise self.script.device_flow_start_error
         return {"user_code": "ABC123", "message": "Go to https://microsoft.com/devicelogin and enter ABC123"}
 
     def acquire_token_by_device_flow(self, flow: dict[str, Any]) -> dict[str, Any] | None:
+        if self.script.device_flow_acquire_error is not None:
+            raise self.script.device_flow_acquire_error
         result = self.script.device_result
         if result and result.get("access_token"):
             claims = result["id_token_claims"]
@@ -163,12 +168,3 @@ def seed_cache(
             "data": {},
         }
     )
-
-
-FAKE_MSAL = FakeAppFactory(Script())
-
-
-def use_script(script: Script) -> Script:
-    """Answer this test's MSAL calls from ``script`` (the conftest fixture resets it per test)."""
-    FAKE_MSAL.script = script
-    return script
