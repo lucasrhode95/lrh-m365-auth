@@ -66,6 +66,12 @@ PROFILES: Mapping[str, TokenProfile] = MappingProxyType(
             ("https://graph.microsoft.com/.default",),
             "Teams Graph operations including channels, people, photos and sending",
         ),
+        "outlook.calendar": TokenProfile(
+            "outlook.calendar",
+            TEAMS_CLIENT_ID,
+            ("https://graph.microsoft.com/Calendars.Read",),
+            "Outlook calendar windows through Graph; the Outlook Graph client has no calendar scope",
+        ),
     }
 )
 

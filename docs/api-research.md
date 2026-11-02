@@ -23,3 +23,9 @@ permission reference cannot tell this. Probes used the `organizations` authority
 Silent token acquisition through that profile, and live `/me` profile and photo reads, succeeded from the
 existing shared cache without a device-code flow. This validates the existing account's grants, not a fresh
 account's consent outcome.
+
+**Explicit calendar scope on the Teams client (live, 2026-11-02):** the Teams client
+`1fec8e78-bce4-4aaf-ab1b-5451cc387264` was asked silently for Graph `Calendars.Read` alone, from the cache
+and again with a forced refresh. Both answered without a device code, and Graph `/me/calendarView` accepted
+the token. The token carried the same 35 scopes as the client's Graph `.default` token, including
+`Calendars.ReadWrite(.Shared)`: asking for one scope did not narrow what this first-party client receives.

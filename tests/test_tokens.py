@@ -51,6 +51,7 @@ def test_profile_catalog_covers_all_three_connectors_without_name_collisions() -
         "teams.spaces",
         "teams.csa",
         "teams.graph",
+        "outlook.calendar",
     )
     assert len({profile.name for profile in PROFILES.values()}) == len(PROFILES)
 

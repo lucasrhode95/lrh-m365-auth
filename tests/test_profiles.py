@@ -12,3 +12,9 @@ def test_microsoft_365_search_profile_uses_the_separately_verified_search_resour
     profile = PROFILES["m365.search"]
     assert profile.client_id == PROFILES["outlook.api"].client_id
     assert profile.scopes == ("https://outlook.office.com/search/.default",)
+
+
+def test_outlook_calendar_profile_reads_calendars_on_the_teams_client_under_its_own_name() -> None:
+    profile = PROFILES["outlook.calendar"]
+    assert profile.client_id == PROFILES["teams.graph"].client_id
+    assert profile.scopes == ("https://graph.microsoft.com/Calendars.Read",)
