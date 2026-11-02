@@ -26,6 +26,11 @@ The `m365.search` profile requests the separate Outlook-host Search resource use
 Search v2 calendar and Teams-message queries. It uses the same first-party client as `outlook.api`
 but has a distinct resource token; approval for one resource does not prove the other is available.
 
+The `outlook.calendar` profile gives the Outlook connector Graph calendar reads. The Outlook Graph
+client has no calendar scope, so it uses the Teams client, which does. It is separate from `teams.graph`
+so that changes made for Teams cannot break Outlook's calendar. It shares the Teams client's sign-in and
+adds no device code.
+
 Connectors bind the token source used by a service context to that context's account. If another
 process switches accounts, later API requests from the old context fail with an account mismatch
 instead of mixing the new account's remote data with the old account's local store.
