@@ -77,6 +77,17 @@ class CacheStatus:
 
 
 @dataclass(frozen=True)
+class DeviceCodePrompt:
+    """One device-code sign-in step as data, for callers that render their own prompt."""
+
+    profile: str
+    user_code: str
+    verification_uri: str
+    message: str
+    expires_at: float | None
+
+
+@dataclass(frozen=True)
 class BootstrapResult:
     profile: str
     token: AccessToken | None

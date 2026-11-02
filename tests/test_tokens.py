@@ -13,6 +13,7 @@ from m365_auth import (
     AuthConfigurationError,
     AuthenticationRequired,
     AuthUpstream,
+    DeviceCodePrompt,
     SecureStorageUnavailable,
     TokenProvider,
     tokens,
@@ -129,6 +130,23 @@ def test_device_code_sign_in_binds_account_and_shows_identity_message(tmp_path: 
     assert Account.from_msal(script.accounts[0]).object_id == USER_OID
 
 
+def test_prompt_receives_the_device_code_as_data_instead_of_the_message(tmp_path: Path) -> None:
+    shown: list[str] = []
+    prompts: list[DeviceCodePrompt] = []
+    script = Script(device_result=token_result(aud=GRAPH, scp="Mail.Read", source="identity_provider"))
+    provider(script, tmp_path).sign_in("outlook.graph", show=shown.append, prompt=prompts.append)
+    assert shown == []
+    assert prompts == [
+        DeviceCodePrompt(
+            profile="outlook.graph",
+            user_code="ABC123",
+            verification_uri="https://microsoft.com/devicelogin",
+            message="Go to https://microsoft.com/devicelogin and enter ABC123",
+            expires_at=1_900_000_900.0,
+        )
+    ]
+
+
 def test_sign_in_for_a_different_account_is_removed_and_refused(tmp_path: Path) -> None:
     script = Script(
         accounts=[msal_account(username="bound@example.com")],
@@ -182,6 +200,18 @@ def test_bootstrap_does_not_start_new_device_flows_after_approval_fails(tmp_path
     results = provider(script, tmp_path, profiles=profiles).bootstrap(show=lambda _message: None)
     assert script.device_flow_start_calls == 1
     assert [result.ready for result in results] == [False, False]
+
+
+def test_bootstrap_reports_each_profile_as_it_settles(tmp_path: Path) -> None:
+    script = Script(device_result={"error": "authorization_declined"})
+    profiles = {name: PROFILES[name] for name in ("outlook.graph", "outlook.api")}
+    reported = []
+    prompts: list[DeviceCodePrompt] = []
+    results = provider(script, tmp_path, profiles=profiles).bootstrap(
+        prompt=prompts.append, progress=reported.append
+    )
+    assert [prompt.profile for prompt in prompts] == ["outlook.graph"]
+    assert tuple(reported) == results
 
 
 def test_bootstrap_keeps_ready_profile_when_a_later_profile_is_declined(tmp_path: Path) -> None:
