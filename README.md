@@ -31,6 +31,10 @@ client has no calendar scope, so it uses the Teams client, which does. It is sep
 so that changes made for Teams cannot break Outlook's calendar. It shares the Teams client's sign-in and
 adds no device code.
 
+A caller that renders its own sign-in screen, such as an installer, passes `prompt` to `bootstrap` or
+`sign_in`. It receives each device code as a `DeviceCodePrompt` (profile, code, link and expiry) instead
+of the printed message. `progress` receives each profile's `BootstrapResult` as soon as it settles.
+
 Connectors bind the token source used by a service context to that context's account. If another
 process switches accounts, later API requests from the old context fail with an account mismatch
 instead of mixing the new account's remote data with the old account's local store.

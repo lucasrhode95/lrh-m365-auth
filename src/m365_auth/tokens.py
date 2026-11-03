@@ -31,7 +31,14 @@ from m365_auth.errors import (
     AuthUpstream,
     SecureStorageUnavailable,
 )
-from m365_auth.models import AccessToken, Account, BootstrapResult, CacheStatus, ProfileStatus
+from m365_auth.models import (
+    AccessToken,
+    Account,
+    BootstrapResult,
+    CacheStatus,
+    DeviceCodePrompt,
+    ProfileStatus,
+)
 from m365_auth.profiles import AUTHORITY, DENIED_PAIRS, PROFILES, TokenProfile
 
 _REJECTED = {"invalid_grant", "interaction_required", "login_required", "consent_required", "access_denied"}
@@ -163,8 +170,17 @@ class TokenProvider:
             _log.debug("Token profile=%s source=%s", profile, token.source)
             return token
 
-    def sign_in(self, profile: str, *, show: Callable[[str], None] | None = None) -> AccessToken:
-        """Complete one profile's device-code flow without locking while a person approves it."""
+    def sign_in(
+        self,
+        profile: str,
+        *,
+        show: Callable[[str], None] | None = None,
+        prompt: Callable[[DeviceCodePrompt], None] | None = None,
+    ) -> AccessToken:
+        """Complete one profile's device-code flow without locking while a person approves it.
+
+        ``prompt`` receives the code and link as data and replaces ``show`` when given.
+        """
         spec = self._profile(profile)
         with self._lock():
             state = self._read_state()
@@ -187,7 +203,10 @@ class TokenProvider:
             raise AuthUpstream(f"Could not reach Microsoft sign-in ({type(exc).__name__}).") from None
         if not isinstance(flow, dict) or "user_code" not in flow:
             raise AuthUpstream(f"Microsoft did not start device-code sign-in: {_error_text(flow)}")
-        (show or _prompt_on_stderr)(str(flow.get("message", "")))
+        if prompt is not None:
+            prompt(_device_code_prompt(profile, flow))
+        else:
+            (show or _prompt_on_stderr)(str(flow.get("message", "")))
         _log.info("Device-code sign-in started profile=%s", profile)
         try:
             result = app.acquire_token_by_device_flow(flow)
@@ -243,16 +262,31 @@ class TokenProvider:
             _log.info("Device-code sign-in completed profile=%s", profile)
             return token
 
-    def bootstrap(self, *, show: Callable[[str], None] | None = None) -> tuple[BootstrapResult, ...]:
-        """Prepare every shared profile, prompting only when silent acquisition needs consent."""
+    def bootstrap(
+        self,
+        *,
+        show: Callable[[str], None] | None = None,
+        prompt: Callable[[DeviceCodePrompt], None] | None = None,
+        progress: Callable[[BootstrapResult], None] | None = None,
+    ) -> tuple[BootstrapResult, ...]:
+        """Prepare every shared profile, prompting only when silent acquisition needs consent.
+
+        ``progress`` receives each profile's result as soon as that profile is settled.
+        """
         results: list[BootstrapResult] = []
+
+        def settle(result: BootstrapResult) -> None:
+            results.append(result)
+            if progress is not None:
+                progress(result)
+
         interactive_allowed = True
         for name in self.profile_names:
             try:
                 token = self.get_token(name)
             except AuthenticationRequired:
                 if not interactive_allowed:
-                    results.append(
+                    settle(
                         BootstrapResult(
                             name,
                             None,
@@ -264,15 +298,15 @@ class TokenProvider:
                     )
                     continue
                 try:
-                    token = self.sign_in(name, show=show)
+                    token = self.sign_in(name, show=show, prompt=prompt)
                 except AuthError as exc:
-                    results.append(BootstrapResult(name, None, exc))
+                    settle(BootstrapResult(name, None, exc))
                     interactive_allowed = False
                     continue
             except AuthError as exc:
-                results.append(BootstrapResult(name, None, exc))
+                settle(BootstrapResult(name, None, exc))
                 continue
-            results.append(BootstrapResult(name, token, None))
+            settle(BootstrapResult(name, token, None))
         return tuple(results)
 
     def sign_out(self) -> bool:
@@ -541,6 +575,17 @@ def _data_dir() -> Path:
         return Path.home() / ".lrh-m365-auth"
     root = os.environ.get("XDG_DATA_HOME")
     return (Path(root) if root else Path.home() / ".local" / "share") / "lrh-m365-auth"
+
+
+def _device_code_prompt(profile: str, flow: dict[str, Any]) -> DeviceCodePrompt:
+    expires_at = flow.get("expires_at")
+    return DeviceCodePrompt(
+        profile=profile,
+        user_code=str(flow["user_code"]),
+        verification_uri=str(flow.get("verification_uri", "")),
+        message=str(flow.get("message", "")),
+        expires_at=float(expires_at) if isinstance(expires_at, int | float) else None,
+    )
 
 
 def _account_from_result(result: Any) -> Account | None:

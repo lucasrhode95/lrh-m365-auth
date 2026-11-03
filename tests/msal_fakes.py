@@ -108,7 +108,12 @@ class FakeApp:
         self.script.device_flow_start_calls += 1
         if self.script.device_flow_start_error is not None:
             raise self.script.device_flow_start_error
-        return {"user_code": "ABC123", "message": "Go to https://microsoft.com/devicelogin and enter ABC123"}
+        return {
+            "user_code": "ABC123",
+            "verification_uri": "https://microsoft.com/devicelogin",
+            "expires_at": 1_900_000_900.0,
+            "message": "Go to https://microsoft.com/devicelogin and enter ABC123",
+        }
 
     def acquire_token_by_device_flow(self, flow: dict[str, Any]) -> dict[str, Any] | None:
         if self.script.device_flow_acquire_error is not None:
