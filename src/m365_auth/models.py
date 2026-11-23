@@ -1,7 +1,5 @@
 """Shared account, access-token, profile and cache-status data types."""
 
-from __future__ import annotations
-
 import base64
 import hashlib
 import json
@@ -17,7 +15,7 @@ def decode_claims(token: str) -> dict[str, Any]:
         return {}
     try:
         payload = json.loads(base64.urlsafe_b64decode(parts[1] + "=" * (-len(parts[1]) % 4)))
-    except (ValueError, json.JSONDecodeError):
+    except ValueError, json.JSONDecodeError:
         return {}
     return payload if isinstance(payload, dict) else {}
 

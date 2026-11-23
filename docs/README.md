@@ -3,6 +3,7 @@
 | Document | Read it for |
 |---|---|
 | [Sign-in research](api-research.md) | Dated evidence of which Microsoft clients are granted which permissions, which decides the profile catalog |
+| [Roadmap](roadmap.md) | Open work |
 
 Diagram: [shared sign-in](diagrams/architecture.svg): profiles, clients, the connectors that use them, and the cache.
 

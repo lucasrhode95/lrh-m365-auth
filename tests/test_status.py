@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 from m365_auth import PROFILES, check_profiles, status_lines, status_report

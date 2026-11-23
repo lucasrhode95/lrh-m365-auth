@@ -5,8 +5,6 @@ network call. ``status_lines`` renders the same data for a terminal, and ``check
 check behind ``status --check``. Nothing here prints, and no token value leaves this module.
 """
 
-from __future__ import annotations
-
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any

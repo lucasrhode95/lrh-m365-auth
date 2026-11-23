@@ -4,8 +4,6 @@ Logs go to the ``m365_auth`` loggers and follow the host application's logging c
 library adds no handlers. Records name profiles and outcomes only, never tokens, accounts or codes.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import os
@@ -425,7 +423,7 @@ class TokenProvider:
             data = json.loads(self.state_path.read_text(encoding="utf-8"))
         except FileNotFoundError:
             return _AccountState("", None)
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        except OSError, UnicodeDecodeError, json.JSONDecodeError:
             raise AuthConfigurationError(
                 "The shared account-state file cannot be read; sign-in is blocked."
             ) from None
