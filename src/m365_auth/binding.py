@@ -1,7 +1,5 @@
 """Bind API token acquisition to the account that owns a connector service context."""
 
-from __future__ import annotations
-
 from typing import Protocol
 
 from m365_auth.errors import AccountMismatch

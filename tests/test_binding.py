@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 
 from m365_auth import AccessToken, Account, AccountBoundTokenSource, AccountMismatch

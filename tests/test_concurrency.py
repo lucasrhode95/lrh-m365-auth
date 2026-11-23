@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from multiprocessing import get_context
 from pathlib import Path
 from typing import Any
